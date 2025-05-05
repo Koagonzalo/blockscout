@@ -1,82 +1,97 @@
-Rate limits could be defined in json config, which should be passed to `API_RATE_LIMIT_CONFIG_URL` as url to json file. 
-Rate limits json config structure:
-json config is a map, where
-keys - API endpoints path, and values - rate limit config.
-Example: 
-```
+# Rate Limits Configuration
+
+Rate limits can be defined in a JSON configuration file, which should be passed to `API_RATE_LIMIT_CONFIG_URL` as a URL to the JSON file.
+
+## Configuration Structure
+
+The JSON configuration is a map where:
+- **Keys**: API endpoint paths
+- **Values**: Rate limit configuration
+
+### Example Configuration
+```json
 "api/account/v2/send_otp": {
   "recaptcha_to_bypass_429": true,
-    "ip": {
-      "period": "1h",
-      "limit": 1
-    }
+  "ip": {
+    "period": "1h",
+    "limit": 1
+  }
 }
 ```
-Path should not contain any query params.
-Path should not contain trailing slashes
-Path could contain `*`, it works as wildcard, means that path starting from the asterics will be discarded while matching. For example: `api/v2/*` will match to `api/v2`, `api/v2/addresses`.
-Path could contain `:param`, means some variable parameter in endpoint path. For example: `api/v2/addresses/:param` will match to `api/v2/addresses/0x00000..000`
-Please note, that it's not allowed to use `*` and `:param` simultaneously.
-Priority of paths defined in config 
- 1. path without `:param` and `*`
- 2. path with `:param`
- 3. path with `*`
-Config must contain `default` key, where will be defined default API rate limit config, which will be used if for some endpoing won't match any of defined paths in config. (Excluding graphQL endpoints, them are out of scope for this config, and rate limits as previously based on ENVs: `API_GRAPHQL_RATE_LIMIT_*`)
 
-Values for rate limit entry is a json map, which could contain following keys:
-  - "account_api_key" (#rate_limit_option)
-    (if true or a map, then allowed to use API key, emitted in My Account)
-    while overriding account_api_key, make sure that your limits much less than the default ones
-  - "whitelisted_ip" (#rate_limit_option)
-    (if true or a map, then allowed to rate limit by whitelisted IP)
-  - "static_api_key" (#rate_limit_option)
-    (if true or a map, then allowed to rate limit by static API key)
-  - "temporary_token" (#rate_limit_option)
-    (if true or a map, then allowed to rate limit by temporary token (cookie), issued by /api/v2/key)
-  - "ip" (#rate_limit_option)
-    (if true or a map, then allowed to rate limit by IP address)
-  - "cost"
-    (integer value, used to decrease allowed limit, by it's value. By default `1`)
-  - "ignore" 
-    (if true, then this endpoint won't be rate limited)
-  - "recaptcha_to_bypass_429" 
-    (if true, then in case of 429, allowed to pass recaptcha header with recaptcha response, if it'll be correct, then request will be allowed)
-  - "bypass_token_scope" 
-    (scope of recaptcha bypass token, supported only `token_instance_refetch_metadata`, implemented in: #####, regulated by envs: INSERT ENV name)
+### Path Rules
+- Paths should not contain query parameters
+- Paths should not contain trailing slashes
+- Paths can contain:
+  - `*` - Works as a wildcard (matches any path starting from the asterisk)
+    - Example: `api/v2/*` matches `api/v2` and `api/v2/addresses`
+  - `:param` - Represents a variable parameter in the endpoint path
+    - Example: `api/v2/addresses/:param` matches `api/v2/addresses/0x00000..000`
+- ⚠️ It's not allowed to use `*` and `:param` simultaneously
 
-#rate_limit_option 
-possible values for such keys in config: true, false, map with (`period` and `limit` keys)
-if true, then the rate limit option is allowed, and limits will be pulled from ENVs.
-if false, or the rate limit option is omitted, then this rate limit option won't be used for that endpoint.
-if map, then the rate limit option is allowed and limits will exactly you defined in map (`limit` requests per `period`):
- - `limit` - integer value representing max amount of request allowed per period
- - `period` - rate limit time period, should be in [time format](https://docs.blockscout.com/setup/env-variables/backend-env-variables#time-format)
-while overriding account_api_key, make sure that your limits much less than the default ones
+### Path Matching Priority
+1. Paths without `:param` and `*`
+2. Paths with `:param`
+3. Paths with `*`
 
+### Default Configuration
+The config must contain a `default` key that defines the default API rate limit configuration. This will be used for endpoints that don't match any defined paths in the config.
 
-## Recaptcha 
-Recaptcha response should be passed via headers: 
-  - `recaptcha-v2-response` for V2 captcha
-  - `recaptcha-v3-response` for V3 captcha
-  - `recaptcha-bypass-token` for not scoped bypass recaptcha token
-  - `scoped-recaptcha-bypass-token` for scoped bypass recaptcha token (currently supported only `token_instance_refetch_metadata` scope), which was implemented in [#12147](https://github.com/blockscout/blockscout/pull/12147)
-Recaptcha for `api/v2/key` endpoint should be sent as now, in request body.
+> **Note**: GraphQL endpoints are out of scope for this config. Their rate limits are based on ENVs: `API_GRAPHQL_RATE_LIMIT_*`
 
-## Rate limits headers
-Backend returns informational headers for rate limits:
-  - `X-RateLimit-Limit` total limit per timeframe
-  - `X-RateLimit-Remaining` remaining amount of requests within current time window
-  - `X-RateLimit-Reset` time to reset rate limits in milliseconds
-Above headers could take `-1` value in case of 
-  - internal errors
-  - `API_NO_RATE_LIMIT_API_KEY` is used
-  - rate limits disabled on the backend
-  - the enpoint you requesting has `"ignore": true` parameter set, and isn't rate limited
+## Rate Limit Options
 
-Also there are `bypass-429-option` header, which indicates which option should fronted use in order to make successful requests even if user hits the limits. Possible values are:
-  - `recaptcha` 
-    each request should paired with recaptcha response in headers (see [#recaptcha])
-  - `temporary_token`
-    should get temporary cookie in api/v2/key endpoint
-  - `no_bypass`
-    no way to bypass 429 error
+Each rate limit entry can contain the following keys:
+
+### Rate Limit Methods
+- `account_api_key` - Allows using API key emitted in My Account
+  > **Important**: When overriding `account_api_key`, ensure your limits are much lower than the default ones
+- `whitelisted_ip` - Allows rate limiting by whitelisted IP
+- `static_api_key` - Allows rate limiting by static API key
+- `temporary_token` - Allows rate limiting by temporary token (cookie) issued by `/api/v2/key`
+- `ip` - Allows rate limiting by IP address
+
+### Additional Options
+- `cost` - Integer value used to decrease allowed limit (default: `1`)
+- `ignore` - If `true`, the endpoint won't be rate limited
+- `recaptcha_to_bypass_429` - If `true`, allows passing recaptcha header with response to bypass 429 errors. 
+- `bypass_token_scope` - Scope of recaptcha bypass token (currently only supports `token_instance_refetch_metadata`)
+
+⚠️ It is recommended to use either `recaptcha_to_bypass_429` or `temporary_token`, not both.
+
+### Rate Limit Option Values
+Each rate limit method can have one of these values:
+- `true` - Rate limit option is allowed, limits pulled from ENVs
+- `false` or omitted - Rate limit option is disabled
+- Map with configuration:
+  - `limit` - Integer value representing max requests allowed per period
+  - `period` - Rate limit time period in [time format](https://docs.blockscout.com/setup/env-variables/backend-env-variables#time-format)
+
+## ReCAPTCHA Implementation
+
+ReCAPTCHA responses should be passed via headers:
+- `recaptcha-v2-response` - For V2 captcha
+- `recaptcha-v3-response` - For V3 captcha
+- `recaptcha-bypass-token` - For non-scoped bypass recaptcha token
+- `scoped-recaptcha-bypass-token` - For scoped bypass recaptcha token (currently only supports `token_instance_refetch_metadata` scope)
+
+> **Note**: ReCAPTCHA for `/api/v2/key` endpoint should be sent in the request body.
+
+## Rate Limit Headers
+
+The backend returns informational headers:
+- `X-RateLimit-Limit` - Total limit per timeframe
+- `X-RateLimit-Remaining` - Remaining requests within current time window
+- `X-RateLimit-Reset` - Time to reset rate limits in milliseconds
+
+These headers may return `-1` in case of:
+- Internal errors
+- `API_NO_RATE_LIMIT_API_KEY` is used
+- Rate limits are disabled on the backend
+- The endpoint has `"ignore": true` parameter set
+
+### Bypass Options Header
+The `bypass-429-option` header indicates how to bypass rate limits:
+- `recaptcha` - Use ReCAPTCHA response in headers
+- `temporary_token` - Get temporary cookie from `/api/v2/key` endpoint
+- `no_bypass` - No way to bypass 429 error
