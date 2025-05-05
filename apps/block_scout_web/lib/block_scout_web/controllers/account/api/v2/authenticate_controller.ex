@@ -3,7 +3,7 @@ defmodule BlockScoutWeb.Account.API.V2.AuthenticateController do
 
   import BlockScoutWeb.Account.AuthController, only: [current_user: 1]
 
-  alias BlockScoutWeb.{AccessHelper, CaptchaHelper}
+  alias BlockScoutWeb.AccessHelper
   alias BlockScoutWeb.Account.API.V2.UserView
   alias BlockScoutWeb.API.V2.ApiView
   alias Explorer.Account.Identity
@@ -213,7 +213,7 @@ defmodule BlockScoutWeb.Account.API.V2.AuthenticateController do
     information.
   """
   @spec authenticate_via_wallet(Conn.t(), map()) :: :error | {:error, any()} | Conn.t()
-  def authenticate_via_wallet(conn, %{"message" => message, "signature" => signature} = params) do
+  def authenticate_via_wallet(conn, %{"message" => message, "signature" => signature}) do
     with {:ok, auth} <- Auth0.get_auth_with_web3(message, signature) do
       put_auth_to_session(conn, auth)
     end

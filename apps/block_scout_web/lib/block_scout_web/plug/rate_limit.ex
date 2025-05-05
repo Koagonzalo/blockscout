@@ -29,45 +29,6 @@ defmodule BlockScoutWeb.Plug.RateLimit do
   # ["api", "account", "v2", ":param"]
   # ["api", "account", "v2", ":param"]
 
-  @special_routes %{
-    "api/account/v2/authenticate_via_wallet" => [
-      recaptcha_to_bypass_429: true,
-      ip: %{
-        period: "1h",
-        limit: 1
-      }
-    ],
-    "api/account/v2/send_otp" => [
-      recaptcha_to_bypass_429: true,
-      ip: %{
-        period: "1h",
-        limit: 1
-      }
-    ],
-    "api/v2/blocks" => [
-      ip: %{
-        period: 1 * 3600 * 1000,
-        limit: 1
-      }
-    ],
-    "api/v2/proxy/super-crit" => [
-      period: "1h",
-      limit: 5,
-      failover: "no_failover",
-      allowed_api_key?: false
-    ],
-    "default" => [
-      static_api_key: true,
-      account_api_key: true,
-      whitelisted_ip: true,
-      ip: true,
-      temporary_token: %{
-        period: "1s",
-        limit: 4
-      }
-    ]
-  }
-
   # any field from static_api_key to temporary_token could be
   # true (will be used default configured rate limits (from envs)),
   # false (disabled option)
@@ -82,21 +43,14 @@ defmodule BlockScoutWeb.Plug.RateLimit do
   # logic on frontend:
   # if X-RateLimit-Remaining
 
-  @multipliers %{
-    "api/v2" => 1,
-    "api/eth-rpc" => 2
-  }
+  # @multipliers %{
+  #   "api/v2" => 1,
+  #   "api/eth-rpc" => 2
+  # }
 
   def init(opts), do: opts
 
   def call(conn, _opts) do
-    dbg(conn.request_path)
-    dbg(conn.path_info)
-    dbg(conn.path_params)
-    dbg(conn.params)
-    dbg(conn.query_params)
-    dbg(conn.query_string)
-
     request_path = request_path(conn)
     config = fetch_rate_limit_config(request_path)
 
@@ -148,7 +102,6 @@ defmodule BlockScoutWeb.Plug.RateLimit do
         config[:recaptcha_to_bypass_429] && user_agent -> "recaptcha"
         config[:temporary_token] && user_agent -> "temporary_token"
         !is_nil(config) -> "no_bypass"
-        # api_v2?(conn) && RateLimit.get_user_agent(conn) -> "temporary_token"
         true -> "no_bypass"
       end
 
@@ -156,13 +109,10 @@ defmodule BlockScoutWeb.Plug.RateLimit do
     |> Conn.put_resp_header("bypass-429-option", option)
   end
 
-  #  x-ratelimit-resource	?
-
   defp handle_call(conn, config) do
     cond do
       graphql?(conn) ->
-        request_path = request_path(conn)
-        RateLimit.check_rate_limit(conn, @multipliers[request_path] || 1, graphql?: graphql?(conn))
+        RateLimit.check_rate_limit(conn, 1, graphql?: graphql?(conn))
 
       true ->
         RateLimit.rate_limit_special(conn, config)
@@ -197,13 +147,6 @@ defmodule BlockScoutWeb.Plug.RateLimit do
   defp graphql?(conn) do
     request_path = request_path(conn)
     request_path == "api/v1/graphql" or request_path == "graphiql"
-  end
-
-  defp api_v1?(conn) do
-    request_path = request_path(conn)
-
-    request_path == "api" or request_path == "api/v1" or request_path == "api/v1/eth-rpc" or
-      request_path == "api/eth-rpc"
   end
 
   defp request_path(conn) do

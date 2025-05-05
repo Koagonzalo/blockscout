@@ -4,7 +4,6 @@ defmodule BlockScoutWeb.API.V2.AdvancedFilterController do
   import BlockScoutWeb.Chain, only: [split_list_by_page: 1, next_page_params: 4, fetch_scam_token_toggle: 2]
   import Explorer.PagingOptions, only: [default_paging_options: 0]
 
-  alias BlockScoutWeb.CaptchaHelper
   alias BlockScoutWeb.API.V2.{AdvancedFilterView, CsvExportController}
   alias Explorer.{Chain, PagingOptions}
   alias Explorer.Chain.{AdvancedFilter, ContractMethod, Data, Token, Transaction}

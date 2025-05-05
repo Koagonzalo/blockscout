@@ -25,7 +25,7 @@ defmodule BlockScoutWeb.API.V2.SmartContractController do
 
   import Explorer.Helper, only: [parse_integer: 1]
 
-  alias BlockScoutWeb.{AccessHelper, CaptchaHelper}
+  alias BlockScoutWeb.AccessHelper
   alias Explorer.Chain
   alias Explorer.Chain.{Address, SmartContract}
   alias Explorer.Chain.SmartContract.AuditReport

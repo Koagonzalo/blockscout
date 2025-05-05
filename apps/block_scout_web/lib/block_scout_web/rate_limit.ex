@@ -63,7 +63,6 @@ defmodule BlockScoutWeb.RateLimit do
 
   def rate_limit_special(conn, config) do
     global_config = Application.get_env(:block_scout_web, :api_rate_limit)
-    dbg(global_config)
 
     result =
       [
@@ -140,7 +139,7 @@ defmodule BlockScoutWeb.RateLimit do
   end
 
   defp collect_recaptcha_headers(conn) do
-    recaptcha_response = get_header_or_nil(conn, "recaptcha-response")
+    recaptcha_response = get_header_or_nil(conn, "recaptcha-v2-response")
     recaptcha_v3_response = get_header_or_nil(conn, "recaptcha-v3-response")
     recaptcha_bypass_token = get_header_or_nil(conn, "recaptcha-bypass-token")
     scoped_recaptcha_bypass_token = get_header_or_nil(conn, "scoped-recaptcha-bypass-token")
@@ -266,9 +265,6 @@ defmodule BlockScoutWeb.RateLimit do
     chain_id = Application.get_env(:block_scout_web, :chain_id)
     "#{chain_id}_#{key}"
   end
-
-  defp api_v2_request?(%Plug.Conn{request_path: "/api/v2/" <> _}), do: true
-  defp api_v2_request?(_), do: false
 
   defp check_no_rate_limit_api_key(conn, no_rate_limit_api_key) do
     user_api_key = get_api_key(conn)

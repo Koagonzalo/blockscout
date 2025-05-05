@@ -1,8 +1,7 @@
 defmodule BlockScoutWeb.API.V2.CsvExportController do
   use BlockScoutWeb, :controller
 
-  alias BlockScoutWeb.{AccessHelper, CaptchaHelper}
-  alias BlockScoutWeb.API.V2.ApiView
+  alias BlockScoutWeb.AccessHelper
   alias Explorer.Chain
   alias Explorer.Chain.Address
   alias Explorer.Chain.Address.CurrentTokenBalance

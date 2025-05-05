@@ -2,7 +2,7 @@ defmodule BlockScoutWeb.API.V2.TokenController do
   use BlockScoutWeb, :controller
   use Utils.CompileTimeEnvHelper, bridged_tokens_enabled: [:explorer, [Explorer.Chain.BridgedToken, :enabled]]
 
-  alias BlockScoutWeb.{AccessHelper, CaptchaHelper}
+  alias BlockScoutWeb.AccessHelper
   alias BlockScoutWeb.API.V2.{AddressView, TransactionView}
   alias Explorer.{Chain, Helper, PagingOptions}
   alias Explorer.Chain.{Address, BridgedToken, Token, Token.Instance}
