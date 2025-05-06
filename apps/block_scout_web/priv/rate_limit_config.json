@@ -2,12 +2,6 @@
   "api/v2/key": {
     "ignore": true
   },
-  "api/v2/stats": {
-    "ip": {
-      "period": "1h",
-      "limit": 1
-    }
-  },
   "api/account/v2/authenticate_via_wallet": {
     "recaptcha_to_bypass_429": true,
     "ip": {
