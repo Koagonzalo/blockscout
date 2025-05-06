@@ -7,7 +7,7 @@ defmodule BlockScoutWeb.Routers.TokensApiV2Router do
   use Utils.CompileTimeEnvHelper, bridged_tokens_enabled: [:explorer, [Explorer.Chain.BridgedToken, :enabled]]
 
   alias BlockScoutWeb.API.V2
-  alias BlockScoutWeb.Plug.{CheckApiV2}
+  alias BlockScoutWeb.Plug.CheckApiV2
 
   @max_query_string_length 5_000
 

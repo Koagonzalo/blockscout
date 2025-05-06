@@ -75,7 +75,6 @@ defmodule BlockScoutWeb.Routers.ApiRouter do
     plug(CheckApiV2)
     plug(:fetch_session)
     plug(:protect_from_forgery)
-    plug(BlockScoutWeb.Plug.RateLimit)
   end
 
   pipeline :api_v2_no_session do

@@ -1,8 +1,10 @@
 defmodule BlockScoutWeb.RateLimit.Hammer.ETS do
+  @moduledoc false
   use Hammer, backend: Hammer.ETS
 end
 
 defmodule BlockScoutWeb.RateLimit.Hammer.Redis do
+  @moduledoc false
   use Hammer, backend: Hammer.Redis
 end
 
@@ -10,10 +12,10 @@ defmodule BlockScoutWeb.RateLimit.Hammer do
   @moduledoc """
     Wrapper for the rate limit functions. Defines union of all functions from `BlockScoutWeb.RateLimit.Hammer.ETS` and `BlockScoutWeb.RateLimit.Hammer.Redis`. Resolves the backend to use based on `Application.get_env(:block_scout_web, :rate_limit_backend)` in runtime.
   """
+  alias BlockScoutWeb.RateLimit.Hammer.{ETS, Redis}
 
   functions =
-    (BlockScoutWeb.RateLimit.Hammer.ETS.__info__(:functions) ++
-       BlockScoutWeb.RateLimit.Hammer.Redis.__info__(:functions))
+    (ETS.__info__(:functions) ++ Redis.__info__(:functions))
     |> Enum.uniq()
 
   for {name, arity} <- functions do

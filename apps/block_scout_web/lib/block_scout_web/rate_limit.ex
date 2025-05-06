@@ -61,50 +61,53 @@ defmodule BlockScoutWeb.RateLimit do
     end
   end
 
-  def rate_limit_special(conn, config) do
-    global_config = Application.get_env(:block_scout_web, :api_rate_limit)
-
-    result =
-      [
-        global_config[:disabled] && fn _ -> {:allow, -1} end,
-        config[:ignore] && fn _ -> {:allow, -1} end,
-        check_no_rate_limit_api_key(conn, global_config[:no_rate_limit_api_key_value]) && fn _ -> {:allow, -1} end,
-        config[:temporary_token] &&
-          (&rate_limit_by_temporary_token(&1, config[:temporary_token], global_config[:temporary_token])),
-        config[:static_api_key] &&
-          (&rate_limit_by_static_api_key(&1, config[:static_api_key], global_config[:static_api_key], global_config)),
-        config[:account_api_key] &&
-          (&rate_limit_by_account_api_key(&1, config[:account_api_key], global_config[:account_api_key])),
-        config[:whitelisted_ip] &&
-          (&rate_limit_by_whitelisted_ip(&1, config[:whitelisted_ip], global_config[:whitelisted_ip], global_config)),
-        config[:ip] &&
-          (&rate_limit_by_ip(&1, config[:ip], global_config[:ip]))
-      ]
-      |> Enum.reject(&(is_nil(&1) || &1 == false))
-      |> Enum.reduce_while(nil, fn fun, _acc ->
-        case fun.(conn) do
-          :skip -> {:cont, nil}
-          result -> {:halt, result}
-        end
-      end)
-      |> mb_check_recaptcha_response(
-        conn,
-        get_user_agent(conn),
-        config[:recaptcha_to_bypass_429],
-        config[:bypass_token_scope]
-      )
-
-    case result do
+  def rate_limit_with_config(conn, config) do
+    config
+    |> prepare_pipeline(conn)
+    |> Enum.reject(&(is_nil(&1) || &1 == false))
+    |> Enum.reduce_while(nil, fn fun, _acc ->
+      case fun.(conn) do
+        :skip -> {:cont, nil}
+        result -> {:halt, result}
+      end
+    end)
+    |> maybe_check_recaptcha_response(
+      conn,
+      get_user_agent(conn),
+      config[:recaptcha_to_bypass_429],
+      config[:bypass_token_scope]
+    )
+    |> case do
       nil ->
         Logger.error("Misconfiguration issue for #{conn.request_path}")
         {:allow, -1}
 
-      _ ->
+      result ->
         result
     end
   end
 
-  defp mb_check_recaptcha_response(result, conn, user_agent, true, scope) when not is_nil(user_agent) do
+  defp prepare_pipeline(conn, config) do
+    global_config = Application.get_env(:block_scout_web, :api_rate_limit)
+
+    [
+      global_config[:disabled] && fn _ -> {:allow, -1} end,
+      config[:ignore] && fn _ -> {:allow, -1} end,
+      check_no_rate_limit_api_key(conn, global_config[:no_rate_limit_api_key_value]) && fn _ -> {:allow, -1} end,
+      config[:temporary_token] &&
+        (&rate_limit_by_temporary_token(&1, config[:temporary_token], global_config[:temporary_token])),
+      config[:static_api_key] &&
+        (&rate_limit_by_static_api_key(&1, config[:static_api_key], global_config[:static_api_key], global_config)),
+      config[:account_api_key] &&
+        (&rate_limit_by_account_api_key(&1, config[:account_api_key], global_config[:account_api_key])),
+      config[:whitelisted_ip] &&
+        (&rate_limit_by_whitelisted_ip(&1, config[:whitelisted_ip], global_config[:whitelisted_ip], global_config)),
+      config[:ip] &&
+        (&rate_limit_by_ip(&1, config[:ip], global_config[:ip]))
+    ]
+  end
+
+  defp maybe_check_recaptcha_response(result, conn, user_agent, true, scope) when not is_nil(user_agent) do
     case result do
       {:deny, _time_to_reset, limit, time_interval} ->
         conn
@@ -122,7 +125,7 @@ defmodule BlockScoutWeb.RateLimit do
     end
   end
 
-  defp mb_check_recaptcha_response(result, _, _, _, _) do
+  defp maybe_check_recaptcha_response(result, _, _, _, _) do
     result
   end
 
@@ -229,7 +232,7 @@ defmodule BlockScoutWeb.RateLimit do
   end
 
   defp rate_limit_by_ip(conn, route_config, default_config) do
-    config = config_or_default(route_config, default_config |> dbg()) |> dbg()
+    config = config_or_default(route_config, default_config)
     ip_string = AccessHelper.conn_to_ip_string(conn)
 
     rate_limit(ip_string, config[:period], config[:limit], config[:cost] || 1)

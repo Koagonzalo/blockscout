@@ -7,9 +7,12 @@ defmodule BlockScoutWeb.Application do
   use Utils.CompileTimeEnvHelper, disable_api?: [:block_scout_web, :disable_api?]
 
   alias BlockScoutWeb.{Endpoint, HealthEndpoint, RateLimit.Hammer}
+  alias BlockScoutWeb.Utility.RateLimitConfigHelper
 
   def start(_type, _args) do
     opts = [strategy: :one_for_one, name: BlockScoutWeb.Supervisor, max_restarts: 1_000]
+
+    RateLimitConfigHelper.fetch_config()
 
     if Application.get_env(:nft_media_handler, :standalone_media_worker?) do
       Supervisor.start_link([Supervisor.child_spec(HealthEndpoint, [])], opts)

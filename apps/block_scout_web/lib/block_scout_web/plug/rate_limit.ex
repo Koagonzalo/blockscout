@@ -5,49 +5,6 @@ defmodule BlockScoutWeb.Plug.RateLimit do
   alias BlockScoutWeb.{AccessHelper, RateLimit}
   alias Plug.Conn
 
-  # static_api_key
-  # account_api_key
-  # whitelisted_ip
-  # temporary_token
-  # limit_by_ip
-
-  # нужен ли regexp в названиях роутов
-  # нужно ли рейтлимитить не по ip, в дефолте
-
-  # should match
-  # "api/account/v2/authenticate_via_wallet"
-  # ["api", "account", "v2", "authenticate_via_wallet"]
-  # ["api", "account", "v2", "authenticate_via_wallet"]
-
-  # # via Enum.take
-  # "api/account/v2/*"
-  # ["api", "account", "v2", "*"]
-  # {["api", "account", "v2"], 3}
-
-  # # via underscoring one of the path part
-  # "api/account/v2/:param"
-  # ["api", "account", "v2", ":param"]
-  # ["api", "account", "v2", ":param"]
-
-  # any field from static_api_key to temporary_token could be
-  # true (will be used default configured rate limits (from envs)),
-  # false (disabled option)
-  # or a map with period and limit
-  # while overriding account_api_key, make sure that your limits much less than the default ones
-  # if you want to use default rate limits, just set true
-  # if you want to disable rate limit, set false
-  # if you want to use custom rate limits, set a map with period and limit
-  #
-  # if you want to use custom rate limits for a specific route, set a map with period and limit
-  #
-  # logic on frontend:
-  # if X-RateLimit-Remaining
-
-  # @multipliers %{
-  #   "api/v2" => 1,
-  #   "api/eth-rpc" => 2
-  # }
-
   def init(opts), do: opts
 
   def call(conn, _opts) do
@@ -60,12 +17,14 @@ defmodule BlockScoutWeb.Plug.RateLimit do
       {:deny, _time_to_reset, _limit, _period} = result ->
         conn
         |> set_rate_limit_headers(result)
+        |> set_rate_limit_headers_for_frontend(config)
         |> AccessHelper.handle_rate_limit_deny(!api_v2?(conn))
 
       result ->
-        set_rate_limit_headers(conn, result)
+        conn
+        |> set_rate_limit_headers(result)
+        |> set_rate_limit_headers_for_frontend(config)
     end
-    |> set_rate_limit_headers_for_frontend(config)
   end
 
   defp set_rate_limit_headers(conn, result) do
@@ -110,38 +69,39 @@ defmodule BlockScoutWeb.Plug.RateLimit do
   end
 
   defp handle_call(conn, config) do
-    cond do
-      graphql?(conn) ->
-        RateLimit.check_rate_limit(conn, 1, graphql?: graphql?(conn))
-
-      true ->
-        RateLimit.rate_limit_special(conn, config)
+    if graphql?(conn) do
+      RateLimit.check_rate_limit(conn, 1, graphql?: graphql?(conn))
+    else
+      RateLimit.rate_limit_with_config(conn, config)
     end
   end
 
   defp fetch_rate_limit_config(request_path) do
-    config = Application.get_env(:block_scout_web, :api_rate_limit)[:config]
+    config = :persistent_term.get(:rate_limit_config)
+
     request_path = request_path |> String.trim("/")
 
-    cond do
-      res = config[:map][request_path] ->
-        res
-
-      true ->
-        find_endpoint_config(config, request_path) || config[:map]["default"]
+    if res = config[:static_match][request_path] do
+      res
+    else
+      find_endpoint_config(config, request_path) || config[:static_match]["default"]
     end
   end
 
   defp find_endpoint_config(config, request_path) do
     request_path_parts = String.split(request_path, "/")
 
-    Enum.find(config[:parametrized_match], fn {key, _config} ->
+    config[:parametrized_match]
+    |> Enum.find({nil, nil}, fn {key, _config} ->
       length(key) == length(request_path_parts) &&
         key |> Enum.zip(request_path_parts) |> Enum.all?(fn {k, r} -> k == r || k == ":param" end)
-    end) ||
-      Enum.find(config[:wildcard_match], fn {{key, length}, _config} when is_integer(length) ->
+    end)
+    |> elem(1) ||
+      config[:wildcard_match]
+      |> Enum.find({nil, nil}, fn {{key, length}, _config} when is_integer(length) ->
         Enum.take(request_path_parts, length) == key
       end)
+      |> elem(1)
   end
 
   defp graphql?(conn) do
