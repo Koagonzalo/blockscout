@@ -8,33 +8,6 @@
       "limit": 1
     }
   },
-  "api/v2/blocks": {
-    "recaptcha_to_bypass_429": true,
-    "ip": {
-      "period": "1h",
-      "limit": 1
-    }
-  },
-  "api/v2/blocks/:param": {
-    "temporary_token": {
-      "period": "1h",
-      "limit": 10
-    },
-    "ip": {
-      "period": "1h",
-      "limit": 1
-    }
-  },
-  "api/v2/addresses/:param/transactions": {
-    "ip": {
-      "period": "1h",
-      "limit": 3
-    },
-    "temporary_token": {
-      "period": "1h",
-      "limit": 10
-    }
-  },
   "api/account/v2/authenticate_via_wallet": {
     "recaptcha_to_bypass_429": true,
     "ip": {
@@ -126,8 +99,5 @@
     "whitelisted_ip": true,
     "ip": true,
     "temporary_token": false
-  },
-  "api/eth-rpc": {
-    "cost": 2
   }
 }
