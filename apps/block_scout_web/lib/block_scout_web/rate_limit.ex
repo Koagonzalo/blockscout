@@ -12,9 +12,9 @@ defmodule BlockScoutWeb.RateLimit do
   @doc """
   Checks, if rate limit reached before making a new request. It is applied to GraphQL API.
   """
-  @spec check_rate_limit(Plug.Conn.t(), integer(), keyword()) ::
+  @spec check_rate_limit_graphql(Plug.Conn.t(), integer()) ::
           {:allow, -1} | {:deny, integer(), integer(), integer()} | {:allow, integer(), integer(), integer()}
-  def check_rate_limit(conn, multiplier, graphql?: true) do
+  def check_rate_limit_graphql(conn, multiplier) do
     config = Application.get_env(:block_scout_web, Api.GraphQL)
     no_rate_limit_api_key = config[:no_rate_limit_api_key]
 
@@ -40,10 +40,13 @@ defmodule BlockScoutWeb.RateLimit do
     with {:api_key, false} <- {:api_key, has_api_key_param?(conn) && user_api_key == static_api_key},
          {:plan, plan} when plan in [false, nil] <- {:plan, has_api_key_param?(conn) && get_plan(conn.query_params)} do
       ip_result =
-        rate_limit("graphql_#{ip_string}", config[:limit_by_ip], config[:time_interval_limit_by_ip], multiplier)
+        rate_limit("graphql_#{ip_string}", config[:time_interval_limit_by_ip], config[:limit_by_ip], multiplier)
 
       if match?({:allow, _}, ip_result) or match?({:allow, _, _, _}, ip_result) do
-        rate_limit("graphql", config[:time_interval_limit], config[:global_limit], multiplier)
+        maybe_replace_result(
+          ip_result,
+          rate_limit("graphql", config[:time_interval_limit], config[:global_limit], multiplier)
+        )
       else
         ip_result
       end
@@ -59,6 +62,18 @@ defmodule BlockScoutWeb.RateLimit do
           multiplier
         )
     end
+  end
+
+  defp maybe_replace_result(ip_result, {:allow, -1}) do
+    ip_result
+  end
+
+  defp maybe_replace_result(ip_result, {:allow, _, _, _}) do
+    ip_result
+  end
+
+  defp maybe_replace_result(_ip_result, global_result) do
+    global_result
   end
 
   def rate_limit_with_config(conn, config) do
@@ -87,7 +102,7 @@ defmodule BlockScoutWeb.RateLimit do
     end
   end
 
-  defp prepare_pipeline(conn, config) do
+  defp prepare_pipeline(config, conn) do
     global_config = Application.get_env(:block_scout_web, :api_rate_limit)
 
     [

@@ -31,9 +31,9 @@ defmodule BlockScoutWeb.Plug.RateLimit do
     case result do
       {:allow, -1} ->
         conn
-        |> Conn.put_resp_header("X-RateLimit-Limit", "-1")
-        |> Conn.put_resp_header("X-RateLimit-Remaining", "-1")
-        |> Conn.put_resp_header("X-RateLimit-Reset", "-1")
+        |> Conn.put_resp_header("x-ratelimit-limit", "-1")
+        |> Conn.put_resp_header("x-ratelimit-remaining", "-1")
+        |> Conn.put_resp_header("x-ratelimit-reset", "-1")
 
       {:allow, count, limit, period} ->
         now = System.system_time(:millisecond)
@@ -41,15 +41,15 @@ defmodule BlockScoutWeb.Plug.RateLimit do
         expires_at = (window + 1) * period
 
         conn
-        |> Conn.put_resp_header("X-RateLimit-Limit", "#{limit}")
-        |> Conn.put_resp_header("X-RateLimit-Remaining", "#{limit - count}")
-        |> Conn.put_resp_header("X-RateLimit-Reset", "#{expires_at - now}")
+        |> Conn.put_resp_header("x-ratelimit-limit", "#{limit}")
+        |> Conn.put_resp_header("x-ratelimit-remaining", "#{limit - count}")
+        |> Conn.put_resp_header("x-ratelimit-reset", "#{expires_at - now}")
 
       {:deny, time_to_reset, limit, _time_interval} ->
         conn
-        |> Conn.put_resp_header("X-RateLimit-Limit", "#{limit}")
-        |> Conn.put_resp_header("X-RateLimit-Remaining", "0")
-        |> Conn.put_resp_header("X-RateLimit-Reset", "#{time_to_reset}")
+        |> Conn.put_resp_header("x-ratelimit-limit", "#{limit}")
+        |> Conn.put_resp_header("x-ratelimit-remaining", "0")
+        |> Conn.put_resp_header("x-ratelimit-reset", "#{time_to_reset}")
     end
   end
 
@@ -70,7 +70,7 @@ defmodule BlockScoutWeb.Plug.RateLimit do
 
   defp handle_call(conn, config) do
     if graphql?(conn) do
-      RateLimit.check_rate_limit(conn, 1, graphql?: graphql?(conn))
+      RateLimit.check_rate_limit_graphql(conn, 1)
     else
       RateLimit.rate_limit_with_config(conn, config)
     end

@@ -3,8 +3,13 @@ defmodule BlockScoutWeb.Utility.RateLimitConfigHelper do
   Fetches the rate limit config from the config url and parses it into a map.
   """
   require Logger
+
   alias Utils.ConfigHelper
 
+  @doc """
+  Fetches the rate limit config from the config url and puts it into the persistent term under the key `:rate_limit_config`.
+  """
+  @spec fetch_config() :: :ok
   def fetch_config do
     :persistent_term.put(:rate_limit_config, fetch_config_inner())
   end
@@ -123,11 +128,7 @@ defmodule BlockScoutWeb.Utility.RateLimitConfigHelper do
     end
   end
 
-  @doc """
-  Recursively decodes time values in nested maps.
-  Converts string time values (like "1h", "5m") in "period" keys to milliseconds.
-  """
-  def decode_time_values(config) when is_map(config) do
+  defp decode_time_values(config) when is_map(config) do
     config
     |> Enum.map(fn
       {:period, value} when is_binary(value) ->
