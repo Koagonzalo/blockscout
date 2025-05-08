@@ -1,5 +1,5 @@
 defmodule BlockScoutWeb.RateLimitTest do
-  use BlockScoutWeb.ConnCase, async: true
+  use BlockScoutWeb.ConnCase, async: false
   alias BlockScoutWeb.RateLimit
 
   describe "check_rate_limit_graphql/3" do

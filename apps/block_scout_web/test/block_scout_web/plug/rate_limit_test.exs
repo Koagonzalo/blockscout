@@ -1,5 +1,5 @@
 defmodule BlockScoutWeb.Plug.RateLimitTest do
-  use BlockScoutWeb.ConnCase, async: true
+  use BlockScoutWeb.ConnCase, async: false
 
   setup do
     # Store original config

@@ -1,5 +1,5 @@
 defmodule BlockScoutWeb.Utility.RateLimitConfigHelperTest do
-  use BlockScoutWeb.ConnCase, async: true
+  use BlockScoutWeb.ConnCase, async: false
   alias BlockScoutWeb.Utility.RateLimitConfigHelper
 
   describe "fetch_config/0" do

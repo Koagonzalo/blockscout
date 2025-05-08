@@ -45,7 +45,7 @@ config :explorer, Explorer.TokenInstanceOwnerAddressMigration.Supervisor, enable
 config :explorer, Explorer.Utility.RateLimiter, enabled: false
 
 config :explorer, Explorer.Utility.Hammer.Redis, enabled: false
-config :explorer, Explorer.Utility.Hammer.ETS, enabled: false
+config :explorer, Explorer.Utility.Hammer.ETS, enabled: true
 
 for migrator <- [
       # Background migrations
