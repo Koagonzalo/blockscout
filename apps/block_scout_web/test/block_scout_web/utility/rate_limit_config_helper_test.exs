@@ -5,8 +5,8 @@ defmodule BlockScoutWeb.Utility.RateLimitConfigHelperTest do
   describe "fetch_config/0" do
     setup do
       # Store original config URL
-      original_url = Application.get_env(:block_scout_web, :api_rate_limit)[:config_url]
-      on_exit(fn -> Application.put_env(:block_scout_web, :api_rate_limit, config_url: original_url) end)
+      original_config = Application.get_env(:block_scout_web, :api_rate_limit)
+      on_exit(fn -> Application.put_env(:block_scout_web, :api_rate_limit, original_config) end)
     end
 
     test "successfully fetches and parses config from URL" do
