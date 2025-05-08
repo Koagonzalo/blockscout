@@ -8,8 +8,7 @@ defmodule BlockScoutWeb.Plug.RateLimit do
   def init(opts), do: opts
 
   def call(conn, _opts) do
-    request_path = request_path(conn)
-    config = fetch_rate_limit_config(request_path)
+    config = fetch_rate_limit_config(conn)
 
     conn
     |> handle_call(config)
@@ -76,21 +75,18 @@ defmodule BlockScoutWeb.Plug.RateLimit do
     end
   end
 
-  defp fetch_rate_limit_config(request_path) do
+  defp fetch_rate_limit_config(conn) do
+    request_path = request_path(conn)
     config = :persistent_term.get(:rate_limit_config)
-
-    request_path = request_path |> String.trim("/")
 
     if res = config[:static_match][request_path] do
       res
     else
-      find_endpoint_config(config, request_path) || config[:static_match]["default"]
+      find_endpoint_config(config, conn.path_info) || config[:static_match]["default"]
     end
   end
 
-  defp find_endpoint_config(config, request_path) do
-    request_path_parts = String.split(request_path, "/")
-
+  defp find_endpoint_config(config, request_path_parts) do
     config[:parametrized_match]
     |> Enum.find({nil, nil}, fn {key, _config} ->
       length(key) == length(request_path_parts) &&
